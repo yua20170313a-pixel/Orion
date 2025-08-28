@@ -1,12 +1,11 @@
 
 
-UserInputService = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local HttpService = game:GetService("HttpService")
-
 local OrionLib = {
 	Elements = {},
 	ThemeObjects = {},
@@ -26,6 +25,7 @@ local OrionLib = {
 	Folder = nil,
 	SaveCfg = false
 }
+
 
 --Feather Icons https://github.com/evoincorp/lucideblox/tree/master/src/modules/util - Created by 7kayoh
 local Icons = {}
@@ -96,43 +96,44 @@ task.spawn(function()
 		Connection:Disconnect()
 	end
 end)
+
 local function AddDraggingFunctionality(DragPoint, Main)
 	pcall(function()
-		local Dragging, DragInput, MousePos, FramePos = false
+		local Dragging, DragInput, InputStartPos, FrameStartPos = false
 
-		DragPoint.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+		DragPoint.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				Dragging = true
-				MousePos = Input.Position
-				FramePos = Main.Position
+				InputStartPos = input.Position
+				FrameStartPos = Main.Position
 
-				Input.Changed:Connect(function()
-					if Input.UserInputState == Enum.UserInputState.End then
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
 						Dragging = false
 					end
 				end)
 			end
 		end)
 
-		DragPoint.InputChanged:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
-				DragInput = Input
+		DragPoint.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+				DragInput = input
 			end
 		end)
 
-		UserInputService.InputChanged:Connect(function(Input)
-			if Input == DragInput and Dragging then
-				local Delta = Input.Position - MousePos
-				TweenService:Create(Main, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-					Position = UDim2.new(
-						FramePos.X.Scale, FramePos.X.Offset + Delta.X,
-						FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y
-					)
-				}):Play()
+		UserInputService.InputChanged:Connect(function(input)
+			if Dragging and input == DragInput then
+				local Delta = input.Position - InputStartPos
+				local targetPos = UDim2.new(
+					FrameStartPos.X.Scale, FrameStartPos.X.Offset + Delta.X,
+					FrameStartPos.Y.Scale, FrameStartPos.Y.Offset + Delta.Y
+				)
+				TweenService:Create(Main, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos}):Play()
 			end
 		end)
 	end)
 end
+
 local function Create(Name, Properties, Children)
 	local Object = Instance.new(Name)
 	for i, v in next, Properties or {} do
@@ -394,72 +395,74 @@ local NotificationHolder = SetProps(SetChildren(MakeElement("TFrame"), {
 })
 
 function OrionLib:MakeNotification(NotificationConfig)
-    -- 通知音を作成
-    local NotificationSound = Instance.new("Sound")
-    NotificationSound.SoundId = "rbxassetid://17208372272" -- 好きな音のIDに置き換え
-    NotificationSound.Volume = 1
-    NotificationSound.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    NotificationSound:Play()
+function OrionLib:MakeNotification(NotificationConfig)
+	spawn(function()
+		NotificationConfig.Name = NotificationConfig.Name or "Notification"
+		NotificationConfig.Content = NotificationConfig.Content or "Test"
+		NotificationConfig.Image = NotificationConfig.Image or "rbxassetid://4384403532"
+		NotificationConfig.Time = NotificationConfig.Time or 15
 
-    -- 通知の内容を設定
-    NotificationConfig.Name = NotificationConfig.Name or "Notification"
-    NotificationConfig.Content = NotificationConfig.Content or "Test"
-    NotificationConfig.Image = NotificationConfig.Image or "rbxassetid://4384403532"
-    NotificationConfig.Time = NotificationConfig.Time or 15
+		local NotificationParent = SetProps(MakeElement("TFrame"), {
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Parent = NotificationHolder
+		})
 
-    -- 通知のUIを作成
-    local NotificationParent = SetProps(MakeElement("TFrame"), {
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = NotificationHolder
-    })
+		local NotificationFrame = SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(25, 25, 25), 0, 10), {
+			Parent = NotificationParent, 
+			Size = UDim2.new(1, 0, 0, 0),
+			Position = UDim2.new(1, -55, 0, 0),
+			BackgroundTransparency = 0,
+			AutomaticSize = Enum.AutomaticSize.Y
+		}), {
+			MakeElement("Stroke", Color3.fromRGB(93, 93, 93), 1.2),
+			MakeElement("Padding", 12, 12, 12, 12),
+			SetProps(MakeElement("Image", NotificationConfig.Image), {
+				Size = UDim2.new(0, 20, 0, 20),
+				ImageColor3 = Color3.fromRGB(240, 240, 240),
+				Name = "Icon"
+			}),
+			SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
+				Size = UDim2.new(1, -30, 0, 20),
+				Position = UDim2.new(0, 30, 0, 0),
+				Font = Enum.Font.GothamBold,
+				Name = "Title"
+			}),
+			SetProps(MakeElement("Label", NotificationConfig.Content, 14), {
+				Size = UDim2.new(1, 0, 0, 0),
+				Position = UDim2.new(0, 0, 0, 25),
+				Font = Enum.Font.GothamSemibold,
+				Name = "Content",
+				AutomaticSize = Enum.AutomaticSize.Y,
+				TextColor3 = Color3.fromRGB(200, 200, 200),
+				TextWrapped = true
+			})
+		})
 
-    local NotificationFrame = SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(25, 25, 25), 0, 10), {
-        Parent = NotificationParent, 
-        Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(1, -55, 0, 0),
-        BackgroundTransparency = 0,
-        AutomaticSize = Enum.AutomaticSize.Y
-    }), {
-        MakeElement("Stroke", Color3.fromRGB(93, 93, 93), 1.2),
-        MakeElement("Padding", 12, 12, 12, 12),
-        SetProps(MakeElement("Image", NotificationConfig.Image), {
-            Size = UDim2.new(0, 20, 0, 20),
-            ImageColor3 = Color3.fromRGB(240, 240, 240),
-            Name = "Icon"
-        }),
-        SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
-            Size = UDim2.new(1, -30, 0, 20),
-            Position = UDim2.new(0, 30, 0, 0),
-            Font = Enum.Font.GothamBold,
-            Name = "Title"
-        }),
-        SetProps(MakeElement("Label", NotificationConfig.Content, 14), {
-            Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 0, 25),
-            Font = Enum.Font.GothamSemibold,
-            Name = "Content",
-            AutomaticSize = Enum.AutomaticSize.Y,
-            TextColor3 = Color3.fromRGB(200, 200, 200),
-            TextWrapped = true
-        })
-    })
+		-- 通知 Tween
+		TweenService:Create(NotificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
 
-    -- 通知のアニメーション
-    TweenService:Create(NotificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+		-- サウンド再生
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://17208372272" -- 好きなサウンドIDに変更
+		sound.Volume = 1
+		sound.PlayOnRemove = true
+		sound.Parent = NotificationFrame
+		sound:Destroy() -- PlayOnRemove で自動再生
 
-    wait(NotificationConfig.Time - 0.88)
-    TweenService:Create(NotificationFrame.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
-    TweenService:Create(NotificationFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.6}):Play()
-    wait(0.3)
-    TweenService:Create(NotificationFrame.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 0.9}):Play()
-    TweenService:Create(NotificationFrame.Title, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {TextTransparency = 0.4}):Play()
-    TweenService:Create(NotificationFrame.Content, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {TextTransparency = 0.5}):Play()
-    wait(0.05)
+		wait(NotificationConfig.Time - 0.88)
+		TweenService:Create(NotificationFrame.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+		TweenService:Create(NotificationFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.6}):Play()
+		wait(0.3)
+		TweenService:Create(NotificationFrame.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 0.9}):Play()
+		TweenService:Create(NotificationFrame.Title, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {TextTransparency = 0.4}):Play()
+		TweenService:Create(NotificationFrame.Content, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {TextTransparency = 0.5}):Play()
+		wait(0.05)
 
-    NotificationFrame:TweenPosition(UDim2.new(1, 20, 0, 0),'In','Quint',0.8,true)
-    wait(1.35)
-    NotificationFrame:Destroy()
+		NotificationFrame:TweenPosition(UDim2.new(1, 20, 0, 0),'In','Quint',0.8,true)
+		wait(1.35)
+		NotificationFrame:Destroy()
+	end)
 end
 
 function OrionLib:Init()
@@ -468,8 +471,8 @@ function OrionLib:Init()
 			if isfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt") then
 				LoadCfg(readfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt"))
 				OrionLib:MakeNotification({
-					Name = "[デバッグ]",
-					Content = "[デバッグ] ゲームの自動ロード設定 " .. game.GameId .. ".",
+					Name = "自動セーブ",
+					Content = "ゲームの自動ロード: " .. game.GameId .. ".",
 					Time = 5
 				})
 			end
@@ -922,112 +925,89 @@ function OrionLib:MakeWindow(WindowConfig)
 				end	
 
 				return Button
-	function ElementFunction:AddToggle(ToggleConfig)
-	ToggleConfig = ToggleConfig or {}
-	ToggleConfig.Name = ToggleConfig.Name or "Toggle"
-	ToggleConfig.Default = ToggleConfig.Default or false
-	ToggleConfig.Callback = ToggleConfig.Callback or function() end
-	ToggleConfig.Color = ToggleConfig.Color or Color3.fromRGB(9, 99, 195)
-	ToggleConfig.Flag = ToggleConfig.Flag or nil
-	ToggleConfig.Save = ToggleConfig.Save or false
+			end    
+			function ElementFunction:AddToggle(ToggleConfig)
+				ToggleConfig = ToggleConfig or {}
+				ToggleConfig.Name = ToggleConfig.Name or "Toggle"
+				ToggleConfig.Default = ToggleConfig.Default or false
+				ToggleConfig.Callback = ToggleConfig.Callback or function() end
+				ToggleConfig.Color = ToggleConfig.Color or Color3.fromRGB(9, 99, 195)
+				ToggleConfig.Flag = ToggleConfig.Flag or nil
+				ToggleConfig.Save = ToggleConfig.Save or false
 
-	local Toggle = {Value = ToggleConfig.Default, Save = ToggleConfig.Save}
+				local Toggle = {Value = ToggleConfig.Default, Save = ToggleConfig.Save}
 
-	local Click = SetProps(MakeElement("Button"), {
-		Size = UDim2.new(1, 0, 1, 0)
-	})
+				local Click = SetProps(MakeElement("Button"), {
+					Size = UDim2.new(1, 0, 1, 0)
+				})
 
-	local ToggleBox = SetChildren(SetProps(MakeElement("RoundFrame", ToggleConfig.Color, 0, 4), {
-		Size = UDim2.new(0, 24, 0, 24),
-		Position = UDim2.new(1, -24, 0.5, 0),
-		AnchorPoint = Vector2.new(0.5, 0.5)
-	}), {
-		SetProps(MakeElement("Stroke"), {
-			Color = ToggleConfig.Color,
-			Name = "Stroke",
-			Transparency = 0.5
-		}),
-		SetProps(MakeElement("Image", "rbxassetid://3944680095"), {
-			Size = UDim2.new(0, 20, 0, 20),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			ImageColor3 = Color3.fromRGB(255, 255, 255),
-			Name = "Ico"
-		}),
-	})
+				local ToggleBox = SetChildren(SetProps(MakeElement("RoundFrame", ToggleConfig.Color, 0, 4), {
+					Size = UDim2.new(0, 24, 0, 24),
+					Position = UDim2.new(1, -24, 0.5, 0),
+					AnchorPoint = Vector2.new(0.5, 0.5)
+				}), {
+					SetProps(MakeElement("Stroke"), {
+						Color = ToggleConfig.Color,
+						Name = "Stroke",
+						Transparency = 0.5
+					}),
+					SetProps(MakeElement("Image", "rbxassetid://3944680095"), {
+						Size = UDim2.new(0, 20, 0, 20),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.5, 0),
+						ImageColor3 = Color3.fromRGB(255, 255, 255),
+						Name = "Ico"
+					}),
+				})
 
-	local ToggleFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 5), {
-		Size = UDim2.new(1, 0, 0, 38),
-		Parent = ItemParent
-	}), {
-		AddThemeObject(SetProps(MakeElement("Label", ToggleConfig.Name, 15), {
-			Size = UDim2.new(1, -12, 1, 0),
-			Position = UDim2.new(0, 12, 0, 0),
-			Font = Enum.Font.GothamBold,
-			Name = "Content"
-		}), "Text"),
-		AddThemeObject(MakeElement("Stroke"), "Stroke"),
-		ToggleBox,
-		Click
-	}), "Second")
+				local ToggleFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 5), {
+					Size = UDim2.new(1, 0, 0, 38),
+					Parent = ItemParent
+				}), {
+					AddThemeObject(SetProps(MakeElement("Label", ToggleConfig.Name, 15), {
+						Size = UDim2.new(1, -12, 1, 0),
+						Position = UDim2.new(0, 12, 0, 0),
+						Font = Enum.Font.GothamBold,
+						Name = "Content"
+					}), "Text"),
+					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+					ToggleBox,
+					Click
+				}), "Second")
 
-	function Toggle:Set(Value)
-		Toggle.Value = Value
-		TweenService:Create(ToggleBox,TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-			BackgroundColor3 = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Divider
-		}):Play()
-		TweenService:Create(ToggleBox.Stroke,TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-			Color = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Stroke
-		}):Play()
-		TweenService:Create(ToggleBox.Ico,TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-			ImageTransparency = Toggle.Value and 0 or 1,
-			Size = Toggle.Value and UDim2.new(0, 20, 0, 20) or UDim2.new(0, 8, 0, 8)
-		}):Play()
-		ToggleConfig.Callback(Toggle.Value)
-	end    
+				function Toggle:Set(Value)
+					Toggle.Value = Value
+					TweenService:Create(ToggleBox, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Divider}):Play()
+					TweenService:Create(ToggleBox.Stroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Color = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Stroke}):Play()
+					TweenService:Create(ToggleBox.Ico, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = Toggle.Value and 0 or 1, Size = Toggle.Value and UDim2.new(0, 20, 0, 20) or UDim2.new(0, 8, 0, 8)}):Play()
+					ToggleConfig.Callback(Toggle.Value)
+				end    
 
-	Toggle:Set(Toggle.Value)
+				Toggle:Set(Toggle.Value)
 
-	local function UpdateBackgroundEnter()
-		TweenService:Create(ToggleFrame,TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-			BackgroundColor3 = Color3.fromRGB(
-				OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 3,
-				OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 3,
-				OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 3
-			)
-		}):Play()
-	end
+				AddConnection(Click.MouseEnter, function()
+					TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 3, OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 3, OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 3)}):Play()
+				end)
 
-	local function UpdateBackgroundLeave()
-		TweenService:Create(ToggleFrame,TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-			BackgroundColor3 = OrionLib.Themes[OrionLib.SelectedTheme].Second
-		}):Play()
-	end
+				AddConnection(Click.MouseLeave, function()
+					TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = OrionLib.Themes[OrionLib.SelectedTheme].Second}):Play()
+				end)
 
-	AddConnection(Click.MouseEnter, UpdateBackgroundEnter)
-	AddConnection(Click.MouseLeave, UpdateBackgroundLeave)
+				AddConnection(Click.MouseButton1Up, function()
+					TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 3, OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 3, OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 3)}):Play()
+					SaveCfg(game.GameId)
+					Toggle:Set(not Toggle.Value)
+				end)
 
-	AddConnection(Click.MouseButton1Up, function()
-		UpdateBackgroundEnter()
-		SaveCfg(game.GameId)
-		Toggle:Set(not Toggle.Value)
-	end)
+				AddConnection(Click.MouseButton1Down, function()
+					TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 6, OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 6, OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 6)}):Play()
+				end)
 
-	AddConnection(Click.MouseButton1Down, function()
-		TweenService:Create(ToggleFrame,TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-			BackgroundColor3 = Color3.fromRGB(
-				OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 6,
-				OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 6,
-				OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 6
-			)
-		}):Play()
-	end)
-
-	if ToggleConfig.Flag then
-		OrionLib.Flags[ToggleConfig.Flag] = Toggle
-	end	
-	return Toggle
-end
+				if ToggleConfig.Flag then
+					OrionLib.Flags[ToggleConfig.Flag] = Toggle
+				end	
+				return Toggle
+			end  
 			function ElementFunction:AddSlider(SliderConfig)
 				SliderConfig = SliderConfig or {}
 				SliderConfig.Name = SliderConfig.Name or "Slider"
@@ -1090,22 +1070,39 @@ end
 					SliderBar
 				}), "Second")
 
-				SliderBar.InputBegan:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+				local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Dragging = false
+local DragInput
+
+SliderBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		Dragging = true
+		DragInput = input
 	end
 end)
 
-SliderBar.InputEnded:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+SliderBar.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		Dragging = false
 	end
 end)
 
-UserInputService.InputChanged:Connect(function(Input)
-	if Dragging and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
-		local SizeScale = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-		Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale)) 
+UserInputService.InputChanged:Connect(function(input)
+	if Dragging and input == DragInput and 
+	   (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local SizeScale = math.clamp(
+			(input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X,
+			0, 1
+		)
+		local targetValue = SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale)
+		Slider:Set(targetValue)
+		
+		-- ハンドルをぬるぬる移動
+		TweenService:Create(Slider.Handle, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new(SizeScale, 0, Slider.Handle.Position.Y.Scale, 0)
+		}):Play()
+
 		SaveCfg(game.GameId)
 	end
 end)
@@ -1481,165 +1478,192 @@ end)
 				end)
 			end 
 			function ElementFunction:AddColorpicker(ColorpickerConfig)
-	ColorpickerConfig = ColorpickerConfig or {}
-	ColorpickerConfig.Name = ColorpickerConfig.Name or "Colorpicker"
-	ColorpickerConfig.Default = ColorpickerConfig.Default or Color3.fromRGB(255,255,255)
-	ColorpickerConfig.Callback = ColorpickerConfig.Callback or function() end
-	ColorpickerConfig.Flag = ColorpickerConfig.Flag or nil
-	ColorpickerConfig.Save = ColorpickerConfig.Save or false
+				ColorpickerConfig = ColorpickerConfig or {}
+				ColorpickerConfig.Name = ColorpickerConfig.Name or "Colorpicker"
+				ColorpickerConfig.Default = ColorpickerConfig.Default or Color3.fromRGB(255,255,255)
+				ColorpickerConfig.Callback = ColorpickerConfig.Callback or function() end
+				ColorpickerConfig.Flag = ColorpickerConfig.Flag or nil
+				ColorpickerConfig.Save = ColorpickerConfig.Save or false
 
-	local ColorH, ColorS, ColorV = 1, 1, 1
-	local Colorpicker = {Value = ColorpickerConfig.Default, Toggled = false, Type = "Colorpicker", Save = ColorpickerConfig.Save}
-	local ColorInput, HueInput = nil, nil
+				local ColorH, ColorS, ColorV = 1, 1, 1
+				local Colorpicker = {Value = ColorpickerConfig.Default, Toggled = false, Type = "Colorpicker", Save = ColorpickerConfig.Save}
 
-	local ColorSelection = Create("ImageLabel", {
-		Size = UDim2.new(0, 18, 0, 18),
-		Position = UDim2.new(select(3, Color3.toHSV(Colorpicker.Value))),
-		ScaleType = Enum.ScaleType.Fit,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundTransparency = 1,
-		Image = "http://www.roblox.com/asset/?id=4805639000"
-	})
+				local ColorSelection = Create("ImageLabel", {
+					Size = UDim2.new(0, 18, 0, 18),
+					Position = UDim2.new(select(3, Color3.toHSV(Colorpicker.Value))),
+					ScaleType = Enum.ScaleType.Fit,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1,
+					Image = "http://www.roblox.com/asset/?id=4805639000"
+				})
 
-	local HueSelection = Create("ImageLabel", {
-		Size = UDim2.new(0, 18, 0, 18),
-		Position = UDim2.new(0.5, 0, 1 - select(1, Color3.toHSV(Colorpicker.Value))),
-		ScaleType = Enum.ScaleType.Fit,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundTransparency = 1,
-		Image = "http://www.roblox.com/asset/?id=4805639000"
-	})
+				local HueSelection = Create("ImageLabel", {
+					Size = UDim2.new(0, 18, 0, 18),
+					Position = UDim2.new(0.5, 0, 1 - select(1, Color3.toHSV(Colorpicker.Value))),
+					ScaleType = Enum.ScaleType.Fit,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1,
+					Image = "http://www.roblox.com/asset/?id=4805639000"
+				})
 
-	local Color = Create("ImageLabel", {
-		Size = UDim2.new(1, -25, 1, 0),
-		Visible = false,
-		Image = "rbxassetid://4155801252"
-	}, {
-		Create("UICorner", {CornerRadius = UDim.new(0, 5)}),
-		ColorSelection
-	})
+				local Color = Create("ImageLabel", {
+					Size = UDim2.new(1, -25, 1, 0),
+					Visible = false,
+					Image = "rbxassetid://4155801252"
+				}, {
+					Create("UICorner", {CornerRadius = UDim.new(0, 5)}),
+					ColorSelection
+				})
 
-	local Hue = Create("Frame", {
-		Size = UDim2.new(0, 20, 1, 0),
-		Position = UDim2.new(1, -20, 0, 0),
-		Visible = false
-	}, {
-		Create("UIGradient", {Rotation = 270, Color = ColorSequence.new{
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,4)),
-			ColorSequenceKeypoint.new(0.2, Color3.fromRGB(234,255,0)),
-			ColorSequenceKeypoint.new(0.4, Color3.fromRGB(21,255,0)),
-			ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0,255,255)),
-			ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0,17,255)),
-			ColorSequenceKeypoint.new(0.9, Color3.fromRGB(255,0,251)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,4))
-		}}),
-		Create("UICorner", {CornerRadius = UDim.new(0,5)}),
-		HueSelection
-	})
+				local Hue = Create("Frame", {
+					Size = UDim2.new(0, 20, 1, 0),
+					Position = UDim2.new(1, -20, 0, 0),
+					Visible = false
+				}, {
+					Create("UIGradient", {Rotation = 270, Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 4)), ColorSequenceKeypoint.new(0.20, Color3.fromRGB(234, 255, 0)), ColorSequenceKeypoint.new(0.40, Color3.fromRGB(21, 255, 0)), ColorSequenceKeypoint.new(0.60, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.80, Color3.fromRGB(0, 17, 255)), ColorSequenceKeypoint.new(0.90, Color3.fromRGB(255, 0, 251)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 4))},}),
+					Create("UICorner", {CornerRadius = UDim.new(0, 5)}),
+					HueSelection
+				})
 
-	local ColorpickerContainer = Create("Frame", {
-		Position = UDim2.new(0,0,0,32),
-		Size = UDim2.new(1,0,1,-32),
-		BackgroundTransparency = 1,
-		ClipsDescendants = true
-	}, {Hue, Color, Create("UIPadding", {
-		PaddingLeft = UDim.new(0,35),
-		PaddingRight = UDim.new(0,35),
-		PaddingBottom = UDim.new(0,10),
-		PaddingTop = UDim.new(0,17)
-	})})
+				local ColorpickerContainer = Create("Frame", {
+					Position = UDim2.new(0, 0, 0, 32),
+					Size = UDim2.new(1, 0, 1, -32),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true
+				}, {
+					Hue,
+					Color,
+					Create("UIPadding", {
+						PaddingLeft = UDim.new(0, 35),
+						PaddingRight = UDim.new(0, 35),
+						PaddingBottom = UDim.new(0, 10),
+						PaddingTop = UDim.new(0, 17)
+					})
+				})
 
-	local Click = SetProps(MakeElement("Button"), {
-		Size = UDim2.new(1,0,1,0)
-	})
+				local Click = SetProps(MakeElement("Button"), {
+					Size = UDim2.new(1, 0, 1, 0)
+				})
 
-	local ColorpickerBox = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255,255,255),0,4), {
-		Size = UDim2.new(0,24,0,24),
-		Position = UDim2.new(1,-12,0.5,0),
-		AnchorPoint = Vector2.new(1,0.5)
-	}), {AddThemeObject(MakeElement("Stroke"),"Stroke")}), "Main")
+				local ColorpickerBox = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 4), {
+					Size = UDim2.new(0, 24, 0, 24),
+					Position = UDim2.new(1, -12, 0.5, 0),
+					AnchorPoint = Vector2.new(1, 0.5)
+				}), {
+					AddThemeObject(MakeElement("Stroke"), "Stroke")
+				}), "Main")
 
-	local ColorpickerFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255,255,255),0,5), {
-		Size = UDim2.new(1,0,0,38),
-		Parent = ItemParent
-	}), {SetProps(SetChildren(MakeElement("TFrame"), {
-		AddThemeObject(SetProps(MakeElement("Label", ColorpickerConfig.Name, 15), {
-			Size = UDim2.new(1,-12,1,0),
-			Position = UDim2.new(0,12,0,0),
-			Font = Enum.Font.GothamBold,
-			Name = "Content"
-		}), "Text"),
-		ColorpickerBox,
-		Click,
-		AddThemeObject(SetProps(MakeElement("Frame"), {Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),Name="Line",Visible=false}),"Stroke")
-	}), {Size=UDim2.new(1,0,0,38),ClipsDescendants=true,Name="F"}), ColorpickerContainer, AddThemeObject(MakeElement("Stroke"),"Stroke")}), "Second")
+				local ColorpickerFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 5), {
+					Size = UDim2.new(1, 0, 0, 38),
+					Parent = ItemParent
+				}), {
+					SetProps(SetChildren(MakeElement("TFrame"), {
+						AddThemeObject(SetProps(MakeElement("Label", ColorpickerConfig.Name, 15), {
+							Size = UDim2.new(1, -12, 1, 0),
+							Position = UDim2.new(0, 12, 0, 0),
+							Font = Enum.Font.GothamBold,
+							Name = "Content"
+						}), "Text"),
+						ColorpickerBox,
+						Click,
+						AddThemeObject(SetProps(MakeElement("Frame"), {
+							Size = UDim2.new(1, 0, 0, 1),
+							Position = UDim2.new(0, 0, 1, -1),
+							Name = "Line",
+							Visible = false
+						}), "Stroke"), 
+					}), {
+						Size = UDim2.new(1, 0, 0, 38),
+						ClipsDescendants = true,
+						Name = "F"
+					}),
+					ColorpickerContainer,
+					AddThemeObject(MakeElement("Stroke"), "Stroke"),
+				}), "Second")
 
-	-- Toggle display
-	AddConnection(Click.MouseButton1Click, function()
-		Colorpicker.Toggled = not Colorpicker.Toggled
-		TweenService:Create(ColorpickerFrame,TweenInfo.new(.15,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Size=Colorpicker.Toggled and UDim2.new(1,0,0,148) or UDim2.new(1,0,0,38)}):Play()
-		Color.Visible = Colorpicker.Toggled
-		Hue.Visible = Colorpicker.Toggled
-		ColorpickerFrame.F.Line.Visible = Colorpicker.Toggled
-	end)
+				AddConnection(Click.MouseButton1Click, function()
+					Colorpicker.Toggled = not Colorpicker.Toggled
+					TweenService:Create(ColorpickerFrame,TweenInfo.new(.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),{Size = Colorpicker.Toggled and UDim2.new(1, 0, 0, 148) or UDim2.new(1, 0, 0, 38)}):Play()
+					Color.Visible = Colorpicker.Toggled
+					Hue.Visible = Colorpicker.Toggled
+					ColorpickerFrame.F.Line.Visible = Colorpicker.Toggled
+				end)
 
-	local function UpdateColorPicker()
-		ColorpickerBox.BackgroundColor3 = Color3.fromHSV(ColorH, ColorS, ColorV)
-		Color.BackgroundColor3 = Color3.fromHSV(ColorH,1,1)
-		Colorpicker:Set(ColorpickerBox.BackgroundColor3)
-		ColorpickerConfig.Callback(ColorpickerBox.BackgroundColor3)
-		SaveCfg(game.GameId)
-	end
+				local function UpdateColorPicker()
+					ColorpickerBox.BackgroundColor3 = Color3.fromHSV(ColorH, ColorS, ColorV)
+					Color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
+					Colorpicker:Set(ColorpickerBox.BackgroundColor3)
+					ColorpickerConfig.Callback(ColorpickerBox.BackgroundColor3)
+					SaveCfg(game.GameId)
+				end
 
-	-- Touch & Mouse support
-	AddConnection(Color.InputBegan, function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			if ColorInput then ColorInput:Disconnect() end
-			ColorInput = AddConnection(RunService.RenderStepped, function()
-				local ColorX = math.clamp(Mouse.X - Color.AbsolutePosition.X,0,Color.AbsoluteSize.X)/Color.AbsoluteSize.X
-				local ColorY = math.clamp(Mouse.Y - Color.AbsolutePosition.Y,0,Color.AbsoluteSize.Y)/Color.AbsoluteSize.Y
-				ColorSelection.Position = UDim2.new(ColorX,0,ColorY,0)
-				ColorS = ColorX
-				ColorV = 1 - ColorY
-				UpdateColorPicker()
-			end)
-		end
-	end)
-	AddConnection(Color.InputEnded, function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			if ColorInput then ColorInput:Disconnect() end
-		end
-	end)
+				ColorH = 1 - (math.clamp(HueSelection.AbsolutePosition.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
+				ColorS = (math.clamp(ColorSelection.AbsolutePosition.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
+				ColorV = 1 - (math.clamp(ColorSelection.AbsolutePosition.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
 
-	AddConnection(Hue.InputBegan, function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			if HueInput then HueInput:Disconnect() end
-			HueInput = AddConnection(RunService.RenderStepped, function()
-				local HueY = math.clamp(Mouse.Y - Hue.AbsolutePosition.Y,0,Hue.AbsoluteSize.Y)/Hue.AbsoluteSize.Y
-				HueSelection.Position = UDim2.new(0.5,0,HueY,0)
-				ColorH = 1 - HueY
-				UpdateColorPicker()
-			end)
-		end
-	end)
-	AddConnection(Hue.InputEnded, function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			if HueInput then HueInput:Disconnect() end
-		end
-	end)
+				AddConnection(Color.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 then
+						if ColorInput then
+							ColorInput:Disconnect()
+						end
+						ColorInput = AddConnection(RunService.RenderStepped, function()
+							local ColorX = (math.clamp(Mouse.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
+							local ColorY = (math.clamp(Mouse.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
+							ColorSelection.Position = UDim2.new(ColorX, 0, ColorY, 0)
+							ColorS = ColorX
+							ColorV = 1 - ColorY
+							UpdateColorPicker()
+						end)
+					end
+				end)
 
-	function Colorpicker:Set(Value)
-		Colorpicker.Value = Value
-		ColorpickerBox.BackgroundColor3 = Colorpicker.Value
-		ColorpickerConfig.Callback(Colorpicker.Value)
-	end
+				AddConnection(Color.InputEnded, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 then
+						if ColorInput then
+							ColorInput:Disconnect()
+						end
+					end
+				end)
 
-	Colorpicker:Set(Colorpicker.Value)
-	if ColorpickerConfig.Flag then
-		OrionLib.Flags[ColorpickerConfig.Flag] = Colorpicker
-	end
-	return Colorpicker
-end
+				AddConnection(Hue.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 then
+						if HueInput then
+							HueInput:Disconnect()
+						end;
+
+						HueInput = AddConnection(RunService.RenderStepped, function()
+							local HueY = (math.clamp(Mouse.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
+
+							HueSelection.Position = UDim2.new(0.5, 0, HueY, 0)
+							ColorH = 1 - HueY
+
+							UpdateColorPicker()
+						end)
+					end
+				end)
+
+				AddConnection(Hue.InputEnded, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 then
+						if HueInput then
+							HueInput:Disconnect()
+						end
+					end
+				end)
+
+				function Colorpicker:Set(Value)
+					Colorpicker.Value = Value
+					ColorpickerBox.BackgroundColor3 = Colorpicker.Value
+					ColorpickerConfig.Callback(Colorpicker.Value)
+				end
+
+				Colorpicker:Set(Colorpicker.Value)
+				if ColorpickerConfig.Flag then				
+					OrionLib.Flags[ColorpickerConfig.Flag] = Colorpicker
+				end
+				return Colorpicker
+			end  
+			return ElementFunction   
+		end	
 
 		local ElementFunction = {}
 
@@ -1720,6 +1744,7 @@ end
 		end
 		return ElementFunction   
 	end  
+	
 	
 	
 
