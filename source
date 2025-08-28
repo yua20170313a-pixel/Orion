@@ -431,7 +431,16 @@ function OrionLib:MakeNotification(NotificationConfig)
 			})
 		})
 
+		-- 通知 Tween
 		TweenService:Create(NotificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+		-- サウンド再生
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://17208372272" -- 好きなサウンドIDに変更
+		sound.Volume = 1
+		sound.PlayOnRemove = true
+		sound.Parent = NotificationFrame
+		sound:Destroy() -- PlayOnRemove で自動再生
 
 		wait(NotificationConfig.Time - 0.88)
 		TweenService:Create(NotificationFrame.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
@@ -446,7 +455,7 @@ function OrionLib:MakeNotification(NotificationConfig)
 		wait(1.35)
 		NotificationFrame:Destroy()
 	end)
-end    
+end
 
 function OrionLib:Init()
 	if OrionLib.SaveCfg then	
@@ -454,8 +463,8 @@ function OrionLib:Init()
 			if isfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt") then
 				LoadCfg(readfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt"))
 				OrionLib:MakeNotification({
-					Name = "Configuration",
-					Content = "Auto-loaded configuration for the game " .. game.GameId .. ".",
+					Name = "[デバッグ]",
+					Content = "自動でセーブされています。ロードされました。" .. game.GameId .. ".",
 					Time = 5
 				})
 			end
