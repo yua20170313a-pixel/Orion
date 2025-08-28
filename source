@@ -97,13 +97,15 @@ task.spawn(function()
 	end
 end)
 
+
 local function AddDraggingFunctionality(DragPoint, Main)
 	pcall(function()
-		local Dragging, DragInput, MousePos, FramePos = false
+		local Dragging, DragInput, StartPos, FramePos = false
+
 		DragPoint.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 				Dragging = true
-				MousePos = Input.Position
+				StartPos = Input.Position
 				FramePos = Main.Position
 
 				Input.Changed:Connect(function()
@@ -113,20 +115,25 @@ local function AddDraggingFunctionality(DragPoint, Main)
 				end)
 			end
 		end)
+
 		DragPoint.InputChanged:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement then
+			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
 				DragInput = Input
 			end
 		end)
+
 		UserInputService.InputChanged:Connect(function(Input)
 			if Input == DragInput and Dragging then
-				local Delta = Input.Position - MousePos
-				TweenService:Create(Main, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position  = UDim2.new(FramePos.X.Scale,FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)}):Play()
+				local Delta = Input.Position - StartPos
+				TweenService:Create(
+					Main,
+					TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{Position = UDim2.new(FramePos.X.Scale, FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)}
+				):Play()
 			end
 		end)
 	end)
-end   
-
+end
 local function Create(Name, Properties, Children)
 	local Object = Instance.new(Name)
 	for i, v in next, Properties or {} do
@@ -389,6 +396,12 @@ local NotificationHolder = SetProps(SetChildren(MakeElement("TFrame"), {
 
 function OrionLib:MakeNotification(NotificationConfig)
 	spawn(function()
+-- 通知音を作成
+local NotificationSound = Instance.new("Sound")
+NotificationSound.SoundId = "rbxassetid://17208372272" -- 好きな音のIDに置き換え
+NotificationSound.Volume = 1
+NotificationSound.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+NotificationSound:Play()
 		NotificationConfig.Name = NotificationConfig.Name or "Notification"
 		NotificationConfig.Content = NotificationConfig.Content or "Test"
 		NotificationConfig.Image = NotificationConfig.Image or "rbxassetid://4384403532"
@@ -454,8 +467,8 @@ function OrionLib:Init()
 			if isfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt") then
 				LoadCfg(readfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt"))
 				OrionLib:MakeNotification({
-					Name = "Configuration",
-					Content = "Auto-loaded configuration for the game " .. game.GameId .. ".",
+					Name = "[デバッグ]",
+					Content = "ゲームの自動ロード設定 " .. game.GameId .. ".",
 					Time = 5
 				})
 			end
@@ -1054,23 +1067,24 @@ function OrionLib:MakeWindow(WindowConfig)
 				}), "Second")
 
 				SliderBar.InputBegan:Connect(function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-						Dragging = true 
-					end 
-				end)
-				SliderBar.InputEnded:Connect(function(Input) 
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-						Dragging = false 
-					end 
-				end)
+	if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = true
+	end
+end)
 
-				UserInputService.InputChanged:Connect(function(Input)
-					if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then 
-						local SizeScale = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-						Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale)) 
-						SaveCfg(game.GameId)
-					end
-				end)
+SliderBar.InputEnded:Connect(function(Input)
+	if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(Input)
+	if Dragging and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
+		local SizeScale = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
+		Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale))
+		SaveCfg(game.GameId)
+	end
+end)
 
 				function Slider:Set(Value)
 					self.Value = math.clamp(Round(Value, SliderConfig.Increment), SliderConfig.Min, SliderConfig.Max)
@@ -1442,7 +1456,8 @@ function OrionLib:MakeWindow(WindowConfig)
 					TweenService:Create(TextboxFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(OrionLib.Themes[OrionLib.SelectedTheme].Second.R * 255 + 6, OrionLib.Themes[OrionLib.SelectedTheme].Second.G * 255 + 6, OrionLib.Themes[OrionLib.SelectedTheme].Second.B * 255 + 6)}):Play()
 				end)
 			end 
-			function ElementFunction:AddColorpicker(ColorpickerConfig)
+end
+							function ElementFunction:AddColorpicker(ColorpickerConfig)
 				ColorpickerConfig = ColorpickerConfig or {}
 				ColorpickerConfig.Name = ColorpickerConfig.Name or "Colorpicker"
 				ColorpickerConfig.Default = ColorpickerConfig.Default or Color3.fromRGB(255,255,255)
@@ -1561,59 +1576,59 @@ function OrionLib:MakeWindow(WindowConfig)
 					ColorpickerConfig.Callback(ColorpickerBox.BackgroundColor3)
 					SaveCfg(game.GameId)
 				end
+ColorH = 1 - (math.clamp(HueSelection.AbsolutePosition.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
+ColorS = (math.clamp(ColorSelection.AbsolutePosition.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
+ColorV = 1 - (math.clamp(ColorSelection.AbsolutePosition.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
 
-				ColorH = 1 - (math.clamp(HueSelection.AbsolutePosition.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
-				ColorS = (math.clamp(ColorSelection.AbsolutePosition.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
-				ColorV = 1 - (math.clamp(ColorSelection.AbsolutePosition.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
+AddConnection(Color.InputBegan, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if ColorInput then
+			ColorInput:Disconnect()
+		end
+		ColorInput = AddConnection(RunService.RenderStepped, function()
+			local ColorX = (math.clamp(Mouse.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
+			local ColorY = (math.clamp(Mouse.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
+			ColorSelection.Position = UDim2.new(ColorX, 0, ColorY, 0)
+			ColorS = ColorX
+			ColorV = 1 - ColorY
+			UpdateColorPicker()
+		end)
+	end
+end)
 
-				AddConnection(Color.InputBegan, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if ColorInput then
-							ColorInput:Disconnect()
-						end
-						ColorInput = AddConnection(RunService.RenderStepped, function()
-							local ColorX = (math.clamp(Mouse.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
-							local ColorY = (math.clamp(Mouse.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
-							ColorSelection.Position = UDim2.new(ColorX, 0, ColorY, 0)
-							ColorS = ColorX
-							ColorV = 1 - ColorY
-							UpdateColorPicker()
-						end)
-					end
-				end)
+AddConnection(Color.InputEnded, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if ColorInput then
+			ColorInput:Disconnect()
+		end
+	end
+end)
 
-				AddConnection(Color.InputEnded, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if ColorInput then
-							ColorInput:Disconnect()
-						end
-					end
-				end)
+AddConnection(Hue.InputBegan, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if HueInput then
+			HueInput:Disconnect()
+		end
 
-				AddConnection(Hue.InputBegan, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if HueInput then
-							HueInput:Disconnect()
-						end;
+		HueInput = AddConnection(RunService.RenderStepped, function()
+			local HueY = math.clamp(Mouse.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y
+			HueSelection.Position = UDim2.new(0.5, 0, HueY, 0)
+			ColorH = 1 - HueY
+			UpdateColorPicker()
+		end)
+	end
+end)
 
-						HueInput = AddConnection(RunService.RenderStepped, function()
-							local HueY = (math.clamp(Mouse.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
+AddConnection(Hue.InputEnded, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if HueInput then
+			HueInput:Disconnect()
+		end
+	end
+end)
 
-							HueSelection.Position = UDim2.new(0.5, 0, HueY, 0)
-							ColorH = 1 - HueY
 
-							UpdateColorPicker()
-						end)
-					end
-				end)
-
-				AddConnection(Hue.InputEnded, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if HueInput then
-							HueInput:Disconnect()
-						end
-					end
-				end)
+				
 
 				function Colorpicker:Set(Value)
 					Colorpicker.Value = Value
@@ -1628,8 +1643,7 @@ function OrionLib:MakeWindow(WindowConfig)
 				return Colorpicker
 			end  
 			return ElementFunction   
-		end	
-
+		end
 		local ElementFunction = {}
 
 		function ElementFunction:AddSection(SectionConfig)
@@ -1710,11 +1724,6 @@ function OrionLib:MakeWindow(WindowConfig)
 		return ElementFunction   
 	end  
 	
-	OrionLib:MakeNotification({
-		Name = "UI Library Upgrade",
-		Content = "New UI Library Available at sirius.menu/discord and sirius.menu/rayfield",
-		Time = 5
-	})
 	
 
 	
@@ -1722,6 +1731,7 @@ function OrionLib:MakeWindow(WindowConfig)
 end   
 
 function OrionLib:Destroy()
+
 	Orion:Destroy()
 end
 
