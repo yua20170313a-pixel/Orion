@@ -6,7 +6,72 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
+-- OrionLib テーマ切替関数（Rainbowアニメ対応）
+function OrionLib:SetTheme(themeName)
+	if not self.Themes[themeName] then return end
+	self.SelectedTheme = themeName
+	local Theme = self.Themes[themeName]
+
+	-- Rainbowテーマならアニメ開始
+	if themeName == "Rainbow" then
+		local hue = 0
+		RunService:BindToRenderStep("RainbowThemeAnimation", 1, function(deltaTime)
+			hue = (hue + deltaTime * 0.1) % 1
+
+			local mainColor = Color3.fromHSV(hue, 1, 1)
+			local secondColor = Color3.fromHSV((hue + 0.2) % 1, 1, 1)
+			local strokeColor = Color3.fromHSV((hue + 0.4) % 1, 1, 1)
+			local textColor = Color3.fromHSV((hue + 0.6) % 1, 1, 1)
+			local textDarkColor = Color3.fromHSV((hue + 0.7) % 1, 0.7, 0.8)
+
+			Theme.Main = mainColor
+			Theme.Second = secondColor
+			Theme.Stroke = strokeColor
+			Theme.Text = textColor
+			Theme.TextDark = textDarkColor
+
+			for _, element in pairs(self.Elements) do
+				if element:IsA("TextLabel") or element:IsA("TextButton") then
+					element.TextColor3 = Theme.Text
+				elseif element:IsA("Frame") or element:IsA("ScrollingFrame") then
+					element.BackgroundColor3 = Theme.Main
+				elseif element:IsA("UIStroke") then
+					element.Color = Theme.Stroke
+				end
+			end
+		end)
+	else
+		-- Rainbow以外はアニメ解除
+		RunService:UnbindFromRenderStep("RainbowThemeAnimation")
+		for _, element in pairs(self.Elements) do
+			if element:IsA("TextLabel") or element:IsA("TextButton") then
+				element.TextColor3 = Theme.Text
+			elseif element:IsA("Frame") or element:IsA("ScrollingFrame") then
+				element.BackgroundColor3 = Theme.Main
+			elseif element:IsA("UIStroke") then
+				element.Color = Theme.Stroke
+			end
+		end
+	end
+end
+
+-- テーマ定義（Blue / Black / DarkBlue / Default / Rainbow）
+OrionLib.Themes = {
+	Default = {
+		Main = Color3.fromRGB(25, 25, 25),
+		Second = Color3.fromRGB(32, 32, 32),
+		Stroke = Color3.fromRGB(60, 60, 60),
+		Divider = Color3.fromRGB(60, 60, 60),
+		Text = Color3.fromRGB(240, 240, 240),
+		TextDark = Color3.fromRGB(150, 150, 150)
+	},
+	Blue = {
+		Main = Color3.fromRGB(20, 40, 180),
+		Second = Color3.fromRGB(30, 60, 220),
+		Stroke = Color3.fromRGB(80, 120, 240),
+		Divider = Color3.fromRGB(70, 110, 230),
 local OrionLib = {
 	Elements = {},
 	ThemeObjects = {},
@@ -26,7 +91,6 @@ local OrionLib = {
 	Folder = nil,
 	SaveCfg = false
 }
-
 --Feather Icons https://github.com/evoincorp/lucideblox/tree/master/src/modules/util - Created by 7kayoh
 local Icons = {}
 
@@ -99,33 +163,40 @@ end)
 
 local function AddDraggingFunctionality(DragPoint, Main)
 	pcall(function()
-		local Dragging, DragInput, MousePos, FramePos = false
-		DragPoint.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-				Dragging = true
-				MousePos = Input.Position
-				FramePos = Main.Position
+		local Dragging, DragInput, InputStartPos, FrameStartPos = false
 
-				Input.Changed:Connect(function()
-					if Input.UserInputState == Enum.UserInputState.End then
+		DragPoint.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				Dragging = true
+				InputStartPos = input.Position
+				FrameStartPos = Main.Position
+
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
 						Dragging = false
 					end
 				end)
 			end
 		end)
-		DragPoint.InputChanged:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement then
-				DragInput = Input
+
+		DragPoint.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+				DragInput = input
 			end
 		end)
-		UserInputService.InputChanged:Connect(function(Input)
-			if Input == DragInput and Dragging then
-				local Delta = Input.Position - MousePos
-				TweenService:Create(Main, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position  = UDim2.new(FramePos.X.Scale,FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)}):Play()
+
+		UserInputService.InputChanged:Connect(function(input)
+			if Dragging and input == DragInput then
+				local Delta = input.Position - InputStartPos
+				local targetPos = UDim2.new(
+					FrameStartPos.X.Scale, FrameStartPos.X.Offset + Delta.X,
+					FrameStartPos.Y.Scale, FrameStartPos.Y.Offset + Delta.Y
+				)
+				TweenService:Create(Main, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos}):Play()
 			end
 		end)
 	end)
-end   
+end
 
 local function Create(Name, Properties, Children)
 	local Object = Instance.new(Name)
@@ -388,6 +459,7 @@ local NotificationHolder = SetProps(SetChildren(MakeElement("TFrame"), {
 })
 
 function OrionLib:MakeNotification(NotificationConfig)
+function OrionLib:MakeNotification(NotificationConfig)
 	spawn(function()
 		NotificationConfig.Name = NotificationConfig.Name or "Notification"
 		NotificationConfig.Content = NotificationConfig.Content or "Test"
@@ -431,7 +503,16 @@ function OrionLib:MakeNotification(NotificationConfig)
 			})
 		})
 
+		-- 通知 Tween
 		TweenService:Create(NotificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+		-- サウンド再生
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://17208372272" -- 好きなサウンドIDに変更
+		sound.Volume = 1
+		sound.PlayOnRemove = true
+		sound.Parent = NotificationFrame
+		sound:Destroy() -- PlayOnRemove で自動再生
 
 		wait(NotificationConfig.Time - 0.88)
 		TweenService:Create(NotificationFrame.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
@@ -446,7 +527,7 @@ function OrionLib:MakeNotification(NotificationConfig)
 		wait(1.35)
 		NotificationFrame:Destroy()
 	end)
-end    
+end
 
 function OrionLib:Init()
 	if OrionLib.SaveCfg then	
@@ -454,8 +535,8 @@ function OrionLib:Init()
 			if isfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt") then
 				LoadCfg(readfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt"))
 				OrionLib:MakeNotification({
-					Name = "Configuration",
-					Content = "Auto-loaded configuration for the game " .. game.GameId .. ".",
+					Name = "自動セーブ",
+					Content = "ゲームの自動ロード: " .. game.GameId .. ".",
 					Time = 5
 				})
 			end
@@ -1053,24 +1134,42 @@ function OrionLib:MakeWindow(WindowConfig)
 					SliderBar
 				}), "Second")
 
-				SliderBar.InputBegan:Connect(function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-						Dragging = true 
-					end 
-				end)
-				SliderBar.InputEnded:Connect(function(Input) 
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-						Dragging = false 
-					end 
-				end)
+				local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Dragging = false
+local DragInput
 
-				UserInputService.InputChanged:Connect(function(Input)
-					if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then 
-						local SizeScale = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-						Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale)) 
-						SaveCfg(game.GameId)
-					end
-				end)
+SliderBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = true
+		DragInput = input
+	end
+end)
+
+SliderBar.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if Dragging and input == DragInput and 
+	   (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local SizeScale = math.clamp(
+			(input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X,
+			0, 1
+		)
+		local targetValue = SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale)
+		Slider:Set(targetValue)
+		
+		-- ハンドルをぬるぬる移動
+		TweenService:Create(Slider.Handle, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new(SizeScale, 0, Slider.Handle.Position.Y.Scale, 0)
+		}):Play()
+
+		SaveCfg(game.GameId)
+	end
+end)
 
 				function Slider:Set(Value)
 					self.Value = math.clamp(Round(Value, SliderConfig.Increment), SliderConfig.Min, SliderConfig.Max)
@@ -1710,11 +1809,7 @@ function OrionLib:MakeWindow(WindowConfig)
 		return ElementFunction   
 	end  
 	
-	OrionLib:MakeNotification({
-		Name = "UI Library Upgrade",
-		Content = "New UI Library Available at sirius.menu/discord and sirius.menu/rayfield",
-		Time = 5
-	})
+	
 	
 
 	
