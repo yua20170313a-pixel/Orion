@@ -6,7 +6,6 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local HttpService = game:GetService("HttpService")
-
 local OrionLib = {
 	Elements = {},
 	ThemeObjects = {},
@@ -20,12 +19,85 @@ local OrionLib = {
 			Divider = Color3.fromRGB(60, 60, 60),
 			Text = Color3.fromRGB(240, 240, 240),
 			TextDark = Color3.fromRGB(150, 150, 150)
+		},
+		Dark = {
+			Main = Color3.fromRGB(20, 20, 20),
+			Second = Color3.fromRGB(35, 35, 35),
+			Stroke = Color3.fromRGB(80, 80, 80),
+			Divider = Color3.fromRGB(80, 80, 80),
+			Text = Color3.fromRGB(255, 255, 255),
+			TextDark = Color3.fromRGB(180, 180, 180)
+		},
+		Light = {
+			Main = Color3.fromRGB(245, 245, 245),
+			Second = Color3.fromRGB(230, 230, 230),
+			Stroke = Color3.fromRGB(200, 200, 200),
+			Divider = Color3.fromRGB(200, 200, 200),
+			Text = Color3.fromRGB(0, 0, 0),
+			TextDark = Color3.fromRGB(100, 100, 100)
+		},
+		Blue = {
+			Main = Color3.fromRGB(30, 60, 150),
+			Second = Color3.fromRGB(50, 90, 200),
+			Stroke = Color3.fromRGB(80, 120, 230),
+			Divider = Color3.fromRGB(80, 120, 230),
+			Text = Color3.fromRGB(255, 255, 255),
+			TextDark = Color3.fromRGB(200, 200, 200)
+		},
+		Red = {
+			Main = Color3.fromRGB(150, 30, 30),
+			Second = Color3.fromRGB(200, 50, 50),
+			Stroke = Color3.fromRGB(230, 80, 80),
+			Divider = Color3.fromRGB(230, 80, 80),
+			Text = Color3.fromRGB(255, 255, 255),
+			TextDark = Color3.fromRGB(200, 200, 200)
+		},
+		Green = {
+			Main = Color3.fromRGB(30, 150, 30),
+			Second = Color3.fromRGB(50, 200, 50),
+			Stroke = Color3.fromRGB(80, 230, 80),
+			Divider = Color3.fromRGB(80, 230, 80),
+			Text = Color3.fromRGB(255, 255, 255),
+			TextDark = Color3.fromRGB(200, 200, 200)
+		},
+		Purple = {
+			Main = Color3.fromRGB(90, 30, 150),
+			Second = Color3.fromRGB(120, 50, 200),
+			Stroke = Color3.fromRGB(150, 80, 230),
+			Divider = Color3.fromRGB(150, 80, 230),
+			Text = Color3.fromRGB(255, 255, 255),
+			TextDark = Color3.fromRGB(200, 200, 200)
+		},
+		Orange = {
+			Main = Color3.fromRGB(200, 100, 30),
+			Second = Color3.fromRGB(230, 120, 50),
+			Stroke = Color3.fromRGB(255, 150, 80),
+			Divider = Color3.fromRGB(255, 150, 80),
+			Text = Color3.fromRGB(0, 0, 0),
+			TextDark = Color3.fromRGB(80, 80, 80)
+		},
+		Cyan = {
+			Main = Color3.fromRGB(30, 150, 150),
+			Second = Color3.fromRGB(50, 200, 200),
+			Stroke = Color3.fromRGB(80, 230, 230),
+			Divider = Color3.fromRGB(80, 230, 230),
+			Text = Color3.fromRGB(0, 0, 0),
+			TextDark = Color3.fromRGB(100, 100, 100)
+		},
+		Pink = {
+			Main = Color3.fromRGB(200, 30, 150),
+			Second = Color3.fromRGB(230, 50, 200),
+			Stroke = Color3.fromRGB(255, 80, 230),
+			Divider = Color3.fromRGB(255, 80, 230),
+			Text = Color3.fromRGB(255, 255, 255),
+			TextDark = Color3.fromRGB(200, 200, 200)
 		}
 	},
 	SelectedTheme = "Default",
 	Folder = nil,
 	SaveCfg = false
 }
+
 
 --Feather Icons https://github.com/evoincorp/lucideblox/tree/master/src/modules/util - Created by 7kayoh
 local Icons = {}
@@ -47,7 +119,7 @@ local function GetIcon(IconName)
 end   
 
 local Orion = Instance.new("ScreenGui")
-Orion.Name = "Orion"
+Orion.Name = "なに？わざわざみたの？"
 if syn then
 	syn.protect_gui(Orion)
 	Orion.Parent = game.CoreGui
@@ -97,36 +169,61 @@ task.spawn(function()
 	end
 end)
 
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
 local function AddDraggingFunctionality(DragPoint, Main)
-	pcall(function()
-		local Dragging, DragInput, MousePos, FramePos = false
-		DragPoint.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-				Dragging = true
-				MousePos = Input.Position
-				FramePos = Main.Position
+    local Dragging = false
+    local DragInput, MousePos, FramePos
+    local ActiveTween
 
-				Input.Changed:Connect(function()
-					if Input.UserInputState == Enum.UserInputState.End then
-						Dragging = false
-					end
-				end)
-			end
-		end)
-		DragPoint.InputChanged:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement then
-				DragInput = Input
-			end
-		end)
-		UserInputService.InputChanged:Connect(function(Input)
-			if Input == DragInput and Dragging then
-				local Delta = Input.Position - MousePos
-				TweenService:Create(Main, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position  = UDim2.new(FramePos.X.Scale,FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)}):Play()
-			end
-		end)
-	end)
-end   
+    DragPoint.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            MousePos = Input.Position
+            FramePos = Main.Position
 
+            Input.Changed:Connect(function()
+                if Input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+
+    DragPoint.InputChanged:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            DragInput = Input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(Input)
+        if Dragging and Input == DragInput then
+            local Delta = Input.Position - MousePos
+            local TargetPos = UDim2.new(
+                FramePos.X.Scale,
+                FramePos.X.Offset + Delta.X,
+                FramePos.Y.Scale,
+                FramePos.Y.Offset + Delta.Y
+            )
+
+            if ActiveTween then
+                ActiveTween:Cancel()
+            end
+
+            ActiveTween = TweenService:Create(
+                Main,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = TargetPos}
+            )
+            ActiveTween:Play()
+        end
+    end)
+
+    UserInputService.TouchEnded:Connect(function()
+        Dragging = false
+    end)
+end
 local function Create(Name, Properties, Children)
 	local Object = Instance.new(Name)
 	for i, v in next, Properties or {} do
@@ -373,81 +470,109 @@ CreateElement("Label", function(Text, TextSize, Transparency)
 	return Label
 end)
 
-local NotificationHolder = SetProps(SetChildren(MakeElement("TFrame"), {
-	SetProps(MakeElement("List"), {
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		VerticalAlignment = Enum.VerticalAlignment.Bottom,
-		Padding = UDim.new(0, 5)
-	})
-}), {
-	Position = UDim2.new(1, -25, 1, -25),
-	Size = UDim2.new(0, 300, 1, -25),
-	AnchorPoint = Vector2.new(1, 1),
-	Parent = Orion
-})
+local TweenService = game:GetService("TweenService")
 
-function OrionLib:MakeNotification(NotificationConfig)
-	spawn(function()
-		NotificationConfig.Name = NotificationConfig.Name or "Notification"
-		NotificationConfig.Content = NotificationConfig.Content or "Test"
-		NotificationConfig.Image = NotificationConfig.Image or "rbxassetid://4384403532"
-		NotificationConfig.Time = NotificationConfig.Time or 15
+-- NotificationHolder 作成（未作成なら）
+local NotificationHolder = Orion:FindFirstChild("NotificationHolder") or (function()
+    local holder = Instance.new("Frame")
+    holder.Name = "NotificationHolder"
+    holder.Size = UDim2.new(0, 300, 1, -25)
+    holder.Position = UDim2.new(1, -25, 1, -25)
+    holder.AnchorPoint = Vector2.new(1, 1)
+    holder.BackgroundTransparency = 1
+    holder.Parent = Orion
 
-		local NotificationParent = SetProps(MakeElement("TFrame"), {
-			Size = UDim2.new(1, 0, 0, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			Parent = NotificationHolder
-		})
+    local list = Instance.new("UIListLayout")
+    list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    list.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    list.SortOrder = Enum.SortOrder.LayoutOrder
+    list.Padding = UDim.new(0, 5)
+    list.Parent = holder
 
-		local NotificationFrame = SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(25, 25, 25), 0, 10), {
-			Parent = NotificationParent, 
-			Size = UDim2.new(1, 0, 0, 0),
-			Position = UDim2.new(1, -55, 0, 0),
-			BackgroundTransparency = 0,
-			AutomaticSize = Enum.AutomaticSize.Y
-		}), {
-			MakeElement("Stroke", Color3.fromRGB(93, 93, 93), 1.2),
-			MakeElement("Padding", 12, 12, 12, 12),
-			SetProps(MakeElement("Image", NotificationConfig.Image), {
-				Size = UDim2.new(0, 20, 0, 20),
-				ImageColor3 = Color3.fromRGB(240, 240, 240),
-				Name = "Icon"
-			}),
-			SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
-				Size = UDim2.new(1, -30, 0, 20),
-				Position = UDim2.new(0, 30, 0, 0),
-				Font = Enum.Font.GothamBold,
-				Name = "Title"
-			}),
-			SetProps(MakeElement("Label", NotificationConfig.Content, 14), {
-				Size = UDim2.new(1, 0, 0, 0),
-				Position = UDim2.new(0, 0, 0, 25),
-				Font = Enum.Font.GothamSemibold,
-				Name = "Content",
-				AutomaticSize = Enum.AutomaticSize.Y,
-				TextColor3 = Color3.fromRGB(200, 200, 200),
-				TextWrapped = true
-			})
-		})
+    return holder
+end)()
 
-		TweenService:Create(NotificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+local function GetList()
+    return NotificationHolder:FindFirstChildOfClass("UIListLayout")
+end
 
-		wait(NotificationConfig.Time - 0.88)
-		TweenService:Create(NotificationFrame.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
-		TweenService:Create(NotificationFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.6}):Play()
-		wait(0.3)
-		TweenService:Create(NotificationFrame.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 0.9}):Play()
-		TweenService:Create(NotificationFrame.Title, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {TextTransparency = 0.4}):Play()
-		TweenService:Create(NotificationFrame.Content, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {TextTransparency = 0.5}):Play()
-		wait(0.05)
+-- 通知関数
+function OrionLib:MakeNotification(Config)
+    task.spawn(function()
+        Config.Name = Config.Name or "Notification"
+        Config.Content = Config.Content or "Test"
+        Config.Image = Config.Image or "rbxassetid://4384403532"
+        Config.Time = Config.Time or 5
 
-		NotificationFrame:TweenPosition(UDim2.new(1, 20, 0, 0),'In','Quint',0.8,true)
-		wait(1.35)
-		NotificationFrame:Destroy()
-	end)
-end    
+        local theme = OrionLib.Themes[OrionLib.SelectedTheme]
 
+        -- 通知フレーム作成
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 0, 0)
+        frame.AutomaticSize = Enum.AutomaticSize.Y
+        frame.BackgroundColor3 = theme.Main
+        frame.BorderSizePixel = 0
+        frame.Parent = NotificationHolder
+
+        local icon = Instance.new("ImageLabel")
+        icon.Size = UDim2.new(0, 24, 0, 24)
+        icon.Position = UDim2.new(0, 10, 0, 10)
+        icon.Image = Config.Image
+        icon.BackgroundTransparency = 1
+        icon.Parent = frame
+
+        local title = Instance.new("TextLabel")
+        title.Text = Config.Name
+        title.Size = UDim2.new(1, -40, 0, 24)
+        title.Position = UDim2.new(0, 40, 0, 10)
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 15
+        title.TextColor3 = theme.Text
+        title.BackgroundTransparency = 1
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = frame
+
+        local content = Instance.new("TextLabel")
+        content.Text = Config.Content
+        content.Size = UDim2.new(1, -10, 0, 0)
+        content.Position = UDim2.new(0, 10, 0, 40)
+        content.Font = Enum.Font.GothamSemibold
+        content.TextSize = 14
+        content.TextColor3 = theme.TextDark
+        content.TextWrapped = true
+        content.AutomaticSize = Enum.AutomaticSize.Y
+        content.BackgroundTransparency = 1
+        content.TextXAlignment = Enum.TextXAlignment.Left
+        content.Parent = frame
+
+        -- Tween 簡略化関数
+        local function Tween(obj, props, time)
+            local tween = TweenService:Create(obj, TweenInfo.new(time, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), props)
+            tween:Play()
+            return tween
+        end
+
+        -- 出現アニメ
+        frame.Position = UDim2.new(0, 0, 0, 0) -- List が位置管理する
+        Tween(frame, {BackgroundTransparency = 0}, 0.4)
+        Tween(icon, {ImageTransparency = 0}, 0.4)
+        Tween(title, {TextTransparency = 0}, 0.4)
+        Tween(content, {TextTransparency = 0}, 0.4)
+
+        -- 表示時間
+        task.wait(Config.Time)
+
+        -- フェードアウト
+        Tween(icon, {ImageTransparency = 1}, 0.4)
+        Tween(frame, {BackgroundTransparency = 0.6}, 0.6)
+        Tween(title, {TextTransparency = 0.5}, 0.6)
+        Tween(content, {TextTransparency = 0.5}, 0.6)
+        task.wait(0.8)
+
+        frame:Destroy()
+    end)
+end
+    
 function OrionLib:Init()
 	if OrionLib.SaveCfg then	
 		pcall(function()
@@ -462,6 +587,7 @@ function OrionLib:Init()
 		end)		
 	end	
 end	
+
 
 function OrionLib:MakeWindow(WindowConfig)
 	local FirstTab = true
