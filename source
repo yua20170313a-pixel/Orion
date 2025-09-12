@@ -1,5 +1,4 @@
 
-
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -97,35 +96,62 @@ task.spawn(function()
 	end
 end)
 
-local function AddDraggingFunctionality(DragPoint, Main)
-	pcall(function()
-		local Dragging, DragInput, MousePos, FramePos = false
-		DragPoint.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-				Dragging = true
-				MousePos = Input.Position
-				FramePos = Main.Position
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
-				Input.Changed:Connect(function()
-					if Input.UserInputState == Enum.UserInputState.End then
-						Dragging = false
-					end
-				end)
-			end
-		end)
-		DragPoint.InputChanged:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement then
-				DragInput = Input
-			end
-		end)
-		UserInputService.InputChanged:Connect(function(Input)
-			if Input == DragInput and Dragging then
-				local Delta = Input.Position - MousePos
-				TweenService:Create(Main, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position  = UDim2.new(FramePos.X.Scale,FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)}):Play()
-			end
-		end)
-	end)
-end   
+
+local function AddDraggingFunctionality(DragPoint, Main)
+    local Dragging = false
+    local DragInput, MousePos, FramePos
+    local ActiveTween
+
+    local function UpdatePosition(input)
+        local Delta = input.Position - MousePos
+        local TargetPos = UDim2.new(
+            FramePos.X.Scale,
+            FramePos.X.Offset + Delta.X,
+            FramePos.Y.Scale,
+            FramePos.Y.Offset + Delta.Y
+        )
+        if ActiveTween then ActiveTween:Cancel() end
+        ActiveTween = TweenService:Create(
+            Main,
+            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = TargetPos}
+        )
+        ActiveTween:Play()
+    end
+
+    DragPoint.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            MousePos = Input.Position
+            FramePos = Main.Position
+
+            Input.Changed:Connect(function()
+                if Input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+
+    DragPoint.InputChanged:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            DragInput = Input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(Input)
+        if Dragging and Input == DragInput then
+            UpdatePosition(Input)
+        end
+    end)
+
+    UserInputService.TouchEnded:Connect(function()
+        Dragging = false
+    end)
+end
 
 local function Create(Name, Properties, Children)
 	local Object = Instance.new(Name)
@@ -454,8 +480,8 @@ function OrionLib:Init()
 			if isfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt") then
 				LoadCfg(readfile(OrionLib.Folder .. "/" .. game.GameId .. ".txt"))
 				OrionLib:MakeNotification({
-					Name = "Configuration",
-					Content = "Auto-loaded configuration for the game " .. game.GameId .. ".",
+					Name = "デバッグ",
+					Content = "ゲームの自動ロード:   " .. game.GameId .. ".",
 					Time = 5
 				})
 			end
@@ -959,12 +985,38 @@ function OrionLib:MakeWindow(WindowConfig)
 				}), "Second")
 
 				function Toggle:Set(Value)
-					Toggle.Value = Value
-					TweenService:Create(ToggleBox, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Divider}):Play()
-					TweenService:Create(ToggleBox.Stroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Color = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Stroke}):Play()
-					TweenService:Create(ToggleBox.Ico, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = Toggle.Value and 0 or 1, Size = Toggle.Value and UDim2.new(0, 20, 0, 20) or UDim2.new(0, 8, 0, 8)}):Play()
-					ToggleConfig.Callback(Toggle.Value)
-				end    
+    Toggle.Value = Value
+
+    -- 背景カラーのグラデーション Tween
+    TweenService:Create(
+        ToggleBox,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        {BackgroundColor3 = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Divider}
+    ):Play()
+
+    -- ストロークの色変化 Tween
+    TweenService:Create(
+        ToggleBox.Stroke,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        {
+            Color = Toggle.Value and ToggleConfig.Color or OrionLib.Themes.Default.Stroke,
+            Transparency = Toggle.Value and 0.3 or 0.5
+        }
+    ):Play()
+
+    -- アイコン透過・サイズアニメーション
+    TweenService:Create(
+        ToggleBox.Ico,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        {
+            ImageTransparency = Toggle.Value and 0 or 1,
+            Size = Toggle.Value and UDim2.new(0, 20, 0, 20) or UDim2.new(0, 8, 0, 8)
+        }
+    ):Play()
+
+    -- コールバック呼び出し
+    ToggleConfig.Callback(Toggle.Value)
+end
 
 				Toggle:Set(Toggle.Value)
 
@@ -1053,24 +1105,44 @@ function OrionLib:MakeWindow(WindowConfig)
 					SliderBar
 				}), "Second")
 
-				SliderBar.InputBegan:Connect(function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-						Dragging = true 
-					end 
-				end)
-				SliderBar.InputEnded:Connect(function(Input) 
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-						Dragging = false 
-					end 
-				end)
+				local UserInputService = game:GetService("UserInputService")
 
-				UserInputService.InputChanged:Connect(function(Input)
-					if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then 
-						local SizeScale = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-						Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale)) 
-						SaveCfg(game.GameId)
-					end
-				end)
+local Dragging = false
+
+-- PC: 左クリック開始
+SliderBar.InputBegan:Connect(function(Input)
+	if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+		Dragging = true
+	elseif Input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = true
+	end
+end)
+
+-- PC: 左クリック終了
+SliderBar.InputEnded:Connect(function(Input)
+	if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+		Dragging = false
+	elseif Input.UserInputType == Enum.UserInputType.Touch then
+		Dragging = false
+	end
+end)
+
+-- モバイル: 指を離したとき
+UserInputService.TouchEnded:Connect(function()
+	Dragging = false
+end)
+
+-- 値の更新処理（PCマウス移動 & モバイル指の移動）
+UserInputService.InputChanged:Connect(function(Input)
+	if Dragging and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
+		local SizeScale = math.clamp(
+			(Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X,
+			0, 1
+		)
+		Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale))
+		SaveCfg(game.GameId)
+	end
+end)
 
 				function Slider:Set(Value)
 					self.Value = math.clamp(Round(Value, SliderConfig.Increment), SliderConfig.Min, SliderConfig.Max)
@@ -1545,75 +1617,87 @@ function OrionLib:MakeWindow(WindowConfig)
 					ColorpickerContainer,
 					AddThemeObject(MakeElement("Stroke"), "Stroke"),
 				}), "Second")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-				AddConnection(Click.MouseButton1Click, function()
-					Colorpicker.Toggled = not Colorpicker.Toggled
-					TweenService:Create(ColorpickerFrame,TweenInfo.new(.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),{Size = Colorpicker.Toggled and UDim2.new(1, 0, 0, 148) or UDim2.new(1, 0, 0, 38)}):Play()
-					Color.Visible = Colorpicker.Toggled
-					Hue.Visible = Colorpicker.Toggled
-					ColorpickerFrame.F.Line.Visible = Colorpicker.Toggled
-				end)
+-- Colorpicker 開閉
+AddConnection(Click.MouseButton1Click, function()
+	Colorpicker.Toggled = not Colorpicker.Toggled
+	TweenService:Create(
+		ColorpickerFrame,
+		TweenInfo.new(.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{Size = Colorpicker.Toggled and UDim2.new(1, 0, 0, 148) or UDim2.new(1, 0, 0, 38)}
+	):Play()
+	Color.Visible = Colorpicker.Toggled
+	Hue.Visible = Colorpicker.Toggled
+	ColorpickerFrame.F.Line.Visible = Colorpicker.Toggled
+end)
 
-				local function UpdateColorPicker()
-					ColorpickerBox.BackgroundColor3 = Color3.fromHSV(ColorH, ColorS, ColorV)
-					Color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
-					Colorpicker:Set(ColorpickerBox.BackgroundColor3)
-					ColorpickerConfig.Callback(ColorpickerBox.BackgroundColor3)
-					SaveCfg(game.GameId)
-				end
+local function UpdateColorPicker()
+	ColorpickerBox.BackgroundColor3 = Color3.fromHSV(ColorH, ColorS, ColorV)
+	Color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
+	Colorpicker:Set(ColorpickerBox.BackgroundColor3)
+	ColorpickerConfig.Callback(ColorpickerBox.BackgroundColor3)
+	SaveCfg(game.GameId)
+end
 
-				ColorH = 1 - (math.clamp(HueSelection.AbsolutePosition.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
-				ColorS = (math.clamp(ColorSelection.AbsolutePosition.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
-				ColorV = 1 - (math.clamp(ColorSelection.AbsolutePosition.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
+ColorH = 1 - (math.clamp(HueSelection.AbsolutePosition.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
+ColorS = (math.clamp(ColorSelection.AbsolutePosition.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
+ColorV = 1 - (math.clamp(ColorSelection.AbsolutePosition.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
 
-				AddConnection(Color.InputBegan, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if ColorInput then
-							ColorInput:Disconnect()
-						end
-						ColorInput = AddConnection(RunService.RenderStepped, function()
-							local ColorX = (math.clamp(Mouse.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
-							local ColorY = (math.clamp(Mouse.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
-							ColorSelection.Position = UDim2.new(ColorX, 0, ColorY, 0)
-							ColorS = ColorX
-							ColorV = 1 - ColorY
-							UpdateColorPicker()
-						end)
-					end
-				end)
+-- PC/モバイル共通入力開始
+AddConnection(Color.InputBegan, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if ColorInput then ColorInput:Disconnect() end
+		ColorInput = AddConnection(RunService.RenderStepped, function()
+			local pos
+			if input.UserInputType == Enum.UserInputType.Touch then
+				pos = input.Position
+			else
+				pos = UserInputService:GetMouseLocation()
+			end
 
-				AddConnection(Color.InputEnded, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if ColorInput then
-							ColorInput:Disconnect()
-						end
-					end
-				end)
+			local ColorX = math.clamp(pos.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X
+			local ColorY = math.clamp(pos.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y
+			ColorSelection.Position = UDim2.new(ColorX, 0, ColorY, 0)
+			ColorS = ColorX
+			ColorV = 1 - ColorY
+			UpdateColorPicker()
+		end)
+	end
+end)
 
-				AddConnection(Hue.InputBegan, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if HueInput then
-							HueInput:Disconnect()
-						end;
+AddConnection(Color.InputEnded, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if ColorInput then ColorInput:Disconnect() end
+	end
+end)
 
-						HueInput = AddConnection(RunService.RenderStepped, function()
-							local HueY = (math.clamp(Mouse.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
+-- Hue スライダーも同様に対応
+AddConnection(Hue.InputBegan, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if HueInput then HueInput:Disconnect() end
+		HueInput = AddConnection(RunService.RenderStepped, function()
+			local pos
+			if input.UserInputType == Enum.UserInputType.Touch then
+				pos = input.Position
+			else
+				pos = UserInputService:GetMouseLocation()
+			end
 
-							HueSelection.Position = UDim2.new(0.5, 0, HueY, 0)
-							ColorH = 1 - HueY
+			local HueY = math.clamp(pos.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y
+			HueSelection.Position = UDim2.new(0.5, 0, HueY, 0)
+			ColorH = 1 - HueY
+			UpdateColorPicker()
+		end)
+	end
+end)
 
-							UpdateColorPicker()
-						end)
-					end
-				end)
-
-				AddConnection(Hue.InputEnded, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						if HueInput then
-							HueInput:Disconnect()
-						end
-					end
-				end)
+AddConnection(Hue.InputEnded, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if HueInput then HueInput:Disconnect() end
+	end
+end)
 
 				function Colorpicker:Set(Value)
 					Colorpicker.Value = Value
@@ -1710,11 +1794,6 @@ function OrionLib:MakeWindow(WindowConfig)
 		return ElementFunction   
 	end  
 	
-	OrionLib:MakeNotification({
-		Name = "UI Library Upgrade",
-		Content = "New UI Library Available at sirius.menu/discord and sirius.menu/rayfield",
-		Time = 5
-	})
 	
 
 	
